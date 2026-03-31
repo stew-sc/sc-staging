@@ -17,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={roboto.variable}>
       <head>
+        <GoogleAnalytics />
         <link
           rel="preconnect"
           href="https://edge-platform-staging.sitecore-staging.cloud"
@@ -25,7 +26,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body>
-        <GoogleAnalytics />
         {children}
       </body>
     </html>

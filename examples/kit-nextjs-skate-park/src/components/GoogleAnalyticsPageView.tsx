@@ -1,17 +1,11 @@
-'use client';
-
-import Script from 'next/script';
 import { GA_MEASUREMENT_ID } from '@/lib/google-analytics';
 
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-    dataLayer?: Record<string, unknown>[];
-  }
-}
-
 /**
- * Standard GA4 tag matching Google's recommended installation.
+ * Standard GA4 tag rendered directly in <head>, matching Google's
+ * recommended installation: "immediately after the <head> element."
+ * No next/script needed — standard <script> tags ensure execution
+ * before hydration, avoiding afterInteractive timing issues.
+ *
  * Initial page view is sent automatically by gtag('config', ...).
  * Client-side SPA navigations are tracked automatically by GA4's
  * Enhanced Measurement (detects History API pushState/replaceState).
@@ -24,9 +18,12 @@ export function GoogleAnalytics() {
 
   return (
     <>
-      <Script
-        id="google-analytics-init"
-        strategy="afterInteractive"
+      {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+      <script
+        async
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+      />
+      <script
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
@@ -36,17 +33,6 @@ export function GoogleAnalytics() {
           `,
         }}
       />
-      <Script
-        id="google-analytics-lib"
-        strategy="afterInteractive"
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-      />
     </>
   );
-}
-
-export function sendGAEvent(...args: unknown[]) {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag(...args);
-  }
 }
