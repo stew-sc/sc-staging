@@ -19,7 +19,7 @@ export default function RootLayout({
       <head>
         <link
           rel="preconnect"
-          href="https://edge-platform.sitecorecloud.io"
+          href="https://edge-platform-staging.sitecore-staging.cloud"
           crossOrigin="anonymous"
         />
         <link rel="icon" href="/favicon.ico" />
