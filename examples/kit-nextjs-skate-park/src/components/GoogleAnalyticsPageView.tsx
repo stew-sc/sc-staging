@@ -12,32 +12,24 @@ declare global {
   }
 }
 
-function sendPageView(path: string) {
-  window.gtag?.('event', 'page_view', {
-    page_path: path + window.location.search,
-    page_location: window.location.href,
-    page_title: document.title,
-  });
-}
-
 /**
- * Loads GA4 via next/script and sends page_view on every route change.
- * The inline config script runs first to define dataLayer/gtag before the
- * external gtag.js library loads. Uses `send_page_view: false` so we
- * control exactly when page_view events fire (no duplicates).
+ * Loads GA4 following Google's standard tag installation.
+ * `gtag('config', ...)` handles the initial page view automatically.
+ * Client-side navigations are tracked via useEffect on pathname changes.
  */
 export function GoogleAnalytics() {
   const pathname = usePathname();
-  const isScriptLoaded = useRef(false);
-  const lastSentPath = useRef<string | null>(null);
+  const initialPathRef = useRef(pathname);
 
   useEffect(() => {
-    if (!GA_MEASUREMENT_ID || !pathname) return;
-    if (!isScriptLoaded.current) return;
-    if (lastSentPath.current === pathname) return;
+    if (pathname === initialPathRef.current) return;
+    if (!GA_MEASUREMENT_ID || typeof window.gtag !== 'function') return;
 
-    lastSentPath.current = pathname;
-    sendPageView(pathname);
+    window.gtag('event', 'page_view', {
+      page_path: pathname + window.location.search,
+      page_location: window.location.href,
+      page_title: document.title,
+    });
   }, [pathname]);
 
   if (!GA_MEASUREMENT_ID) {
@@ -46,23 +38,16 @@ export function GoogleAnalytics() {
 
   return (
     <>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        strategy="afterInteractive"
+      />
       <Script id="google-analytics-init" strategy="afterInteractive">
         {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });`}
+gtag('config', '${GA_MEASUREMENT_ID}');`}
       </Script>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-        onLoad={() => {
-          isScriptLoaded.current = true;
-          if (pathname && lastSentPath.current !== pathname) {
-            lastSentPath.current = pathname;
-            sendPageView(pathname);
-          }
-        }}
-      />
     </>
   );
 }
