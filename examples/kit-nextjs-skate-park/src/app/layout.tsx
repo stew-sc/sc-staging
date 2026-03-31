@@ -17,6 +17,20 @@ export default function RootLayout({
   return (
     <html lang="en" className={roboto.variable}>
       <head>
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-YW6R9JD6YV"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-YW6R9JD6YV');
+            `,
+          }}
+        />
         <link
           rel="preconnect"
           href="https://edge-platform.sitecorecloud.io"
