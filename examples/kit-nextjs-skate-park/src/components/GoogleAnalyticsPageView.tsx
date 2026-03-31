@@ -2,7 +2,7 @@
 
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { GA_MEASUREMENT_ID } from '@/lib/google-analytics';
 
 declare global {
@@ -22,22 +22,21 @@ function sendPageView(path: string) {
 
 /**
  * Loads GA4 via next/script and sends page_view on every route change.
- * Uses `send_page_view: false` to prevent gtag's auto-hit, then fires
- * explicit events — including an onLoad hit for the first page.
+ * The inline config script runs first to define dataLayer/gtag before the
+ * external gtag.js library loads. Uses `send_page_view: false` so we
+ * control exactly when page_view events fire (no duplicates).
  */
 export function GoogleAnalytics() {
   const pathname = usePathname();
-
-  const handleScriptLoad = useCallback(() => {
-    if (pathname) {
-      sendPageView(pathname);
-    }
-  }, [pathname]);
+  const isScriptLoaded = useRef(false);
+  const lastSentPath = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!GA_MEASUREMENT_ID || !pathname || typeof window.gtag !== 'function') {
-      return;
-    }
+    if (!GA_MEASUREMENT_ID || !pathname) return;
+    if (!isScriptLoaded.current) return;
+    if (lastSentPath.current === pathname) return;
+
+    lastSentPath.current = pathname;
     sendPageView(pathname);
   }, [pathname]);
 
@@ -47,17 +46,23 @@ export function GoogleAnalytics() {
 
   return (
     <>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-        onLoad={handleScriptLoad}
-      />
       <Script id="google-analytics-init" strategy="afterInteractive">
         {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });`}
       </Script>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        strategy="afterInteractive"
+        onLoad={() => {
+          isScriptLoaded.current = true;
+          if (pathname && lastSentPath.current !== pathname) {
+            lastSentPath.current = pathname;
+            sendPageView(pathname);
+          }
+        }}
+      />
     </>
   );
 }
