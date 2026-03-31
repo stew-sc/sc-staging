@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Roboto } from "next/font/google";
-import { GoogleAnalytics } from "@/components/GoogleAnalyticsPageView";
+
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? '';
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -17,7 +18,22 @@ export default function RootLayout({
   return (
     <html lang="en" className={roboto.variable}>
       <head>
-        <GoogleAnalytics />
+        {GA_MEASUREMENT_ID && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_MEASUREMENT_ID}');
+                `,
+              }}
+            />
+          </>
+        )}
         <link
           rel="preconnect"
           href="https://edge-platform-staging.sitecore-staging.cloud"
