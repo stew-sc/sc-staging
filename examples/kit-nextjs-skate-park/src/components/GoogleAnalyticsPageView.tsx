@@ -1,46 +1,63 @@
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import Script from 'next/script';
+import { usePathname } from 'next/navigation';
+import { useEffect, useCallback } from 'react';
 import { GA_MEASUREMENT_ID } from '@/lib/google-analytics';
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
-    __gaLastPageViewPath?: string;
+    dataLayer?: Record<string, unknown>[];
   }
 }
 
+function sendPageView(path: string) {
+  window.gtag?.('event', 'page_view', {
+    page_path: path + window.location.search,
+    page_location: window.location.href,
+    page_title: document.title,
+  });
+}
+
 /**
- * Sends GA4 `page_view` when the App Router URL changes. Initial `gtag('config')`
- * uses `send_page_view: false` so every view is sent here — including after client
- * navigations and remounts (Suspense + useSearchParams can re-create this component).
- * Dedupe uses `window` so the same URL is not double-fired across remounts.
+ * Loads GA4 via next/script and sends page_view on every route change.
+ * Uses `send_page_view: false` to prevent gtag's auto-hit, then fires
+ * explicit events — including an onLoad hit for the first page.
  */
-export function GoogleAnalyticsPageView() {
+export function GoogleAnalytics() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchString = searchParams.toString();
+
+  const handleScriptLoad = useCallback(() => {
+    if (pathname) {
+      sendPageView(pathname);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (!GA_MEASUREMENT_ID || !pathname || typeof window.gtag !== 'function') {
       return;
     }
+    sendPageView(pathname);
+  }, [pathname]);
 
-    const pagePath = searchString ? `${pathname}?${searchString}` : pathname;
-    if (window.__gaLastPageViewPath === pagePath) {
-      return;
-    }
-    window.__gaLastPageViewPath = pagePath;
+  if (!GA_MEASUREMENT_ID) {
+    return null;
+  }
 
-    const pageLocation = `${window.location.origin}${pathname}${searchString ? `?${searchString}` : ''}`;
-
-    window.gtag('event', 'page_view', {
-      page_path: pagePath,
-      page_location: pageLocation,
-      page_title: typeof document !== 'undefined' ? document.title : '',
-    });
-  }, [pathname, searchString]);
-
-  return null;
+  return (
+    <>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        strategy="afterInteractive"
+        onLoad={handleScriptLoad}
+      />
+      <Script id="google-analytics-init" strategy="afterInteractive">
+        {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });`}
+      </Script>
+    </>
+  );
 }
