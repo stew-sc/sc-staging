@@ -1,5 +1,8 @@
 import "./globals.css";
+import { Suspense } from "react";
 import { Roboto } from "next/font/google";
+import { GoogleAnalyticsPageView } from "@/components/GoogleAnalyticsPageView";
+import { GA_MEASUREMENT_ID } from "@/lib/google-analytics";
 
 // Configure the font
 const roboto = Roboto({
@@ -17,20 +20,24 @@ export default function RootLayout({
   return (
     <html lang="en" className={roboto.variable}>
       <head>
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-YW6R9JD6YV"
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+        {GA_MEASUREMENT_ID ? (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-YW6R9JD6YV');
+              gtag('config', '${GA_MEASUREMENT_ID}');
             `,
-          }}
-        />
+              }}
+            />
+          </>
+        ) : null}
         <link
           rel="preconnect"
           href="https://edge-platform.sitecorecloud.io"
@@ -38,7 +45,14 @@ export default function RootLayout({
         />
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body>{children}</body>
+      <body>
+        {GA_MEASUREMENT_ID ? (
+          <Suspense fallback={null}>
+            <GoogleAnalyticsPageView />
+          </Suspense>
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }
